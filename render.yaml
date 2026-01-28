@@ -14,7 +14,6 @@ services:
   - type: web
     name: frontend-sorvetes
     env: static
-    region: ohio
     plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: dist
@@ -27,4 +26,4 @@ services:
         fromService:
           type: web
           name: backend-sorvetes
-          property: url
+          property: host

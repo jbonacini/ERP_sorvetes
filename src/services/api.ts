@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * API SERVICE - Backend Simulado
  * Simula um servidor Node.js com banco de dados compartilhado
@@ -26,7 +27,13 @@ import {
 } from '@/types';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000';
+// Use environment variable or fallback to localhost
+const envUrl = import.meta.env.VITE_API_URL;
+// If envUrl is provided but doesn't have protocol (like from Render host property), add https://
+const API_URL = envUrl
+  ? (envUrl.startsWith('http') ? envUrl : `https://${envUrl}`)
+  : 'http://localhost:3000';
+
 export const api = axios.create({ baseURL: API_URL });
 
 // Add interceptor to add token to requests
