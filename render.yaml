@@ -10,3 +10,21 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+
+  - type: static
+    name: frontend-sorvetes
+    env: static
+    region: ohio
+    plan: free
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: backend-sorvetes
+          property: url
