@@ -11,13 +11,13 @@ services:
       - key: JWT_SECRET
         sync: false
 
-  - type: static
+  - type: web
     name: frontend-sorvetes
     env: static
     region: ohio
     plan: free
     buildCommand: npm install && npm run build
-    publishDir: dist
+    staticPublishPath: dist
     routes:
       - type: rewrite
         source: /*
