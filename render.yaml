@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: backend-sorvetes
+    env: docker
+    region: ohio
+    plan: free
+    rootDir: backend
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false

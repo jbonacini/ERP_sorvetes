@@ -1,0 +1,588 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== MÓDULO ADMINISTRATIVO ====================
+
+model Empresa {
+  id            String    @id @default(uuid())
+  razaoSocial   String
+  nomeFantasia  String
+  cnpj          String    @unique
+  inscricaoEstadual String?
+  endereco      EnderecoById? 
+  telefone      String?
+  email         String?
+  website       String?
+  status        String    @default("ATIVA") // ATIVA, BLOQUEADA
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  usuarios      Usuario[]
+  logs          LogSistema[]
+  parametros    ParametroSistema[]
+
+  // Operational Relations
+  turnos        Turno[]
+  colaboradores Colaborador[]
+  clientes      Cliente[]
+  tarefas       TarefaOperacional[]
+  ordens        OrdemServico[]
+
+  // Produtos e Estoque Relation
+  categoriasProdutos CategoriaProduto[]
+  produtos           Produto[]
+  movimentacoes      MovimentacaoEstoque[]
+  pedidos            PedidoVenda[]
+  condicoesPagamento CondicaoPagamento[]
+  areasComerciais    AreaComercial[]
+  gruposTabelaPreco  GrupoTabelaPreco[]
+  funcoesComerciais  FuncaoComercial[]
+  rotas              Rota[]
+  perfisComissao     PerfilComissao[]
+  
+  // Novos Relacionamentos Operacionais
+  transportadoras    Transportadora[]
+  veiculos           Veiculo[]
+}
+
+model Perfil {
+  id            String    @id @default(uuid())
+  nome          String
+  descricao     String?
+  permissoes    String    // JSON com as regras de acesso
+  status        String    @default("ATIVO")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  usuarios      Usuario[]
+}
+
+model Usuario {
+  id            String    @id @default(uuid())
+  empresaId     String?
+  empresa       Empresa?  @relation(fields: [empresaId], references: [id])
+  nome          String
+  email         String    @unique
+  senha         String    // Hash
+  cargo         String?
+  perfilId      String?
+  perfil        Perfil?   @relation(fields: [perfilId], references: [id])
+  status        String    @default("ATIVO")
+  ultimoLogin   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  logs          LogSistema[]
+  colaborador   Colaborador?
+}
+
+model LogSistema {
+  id            String    @id @default(uuid())
+  empresaId     String?   
+  empresa       Empresa?  @relation(fields: [empresaId], references: [id])
+  usuarioId     String?
+  usuario       Usuario?  @relation(fields: [usuarioId], references: [id])
+  modulo        String
+  acao          String
+  descricao     String
+  ip            String?
+  userAgent     String?
+  dadosAnteriores String? // JSON
+  dadosNovos      String? // JSON
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ParametroSistema {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  chave         String
+  valor         String
+  descricao     String?
+  tipo          String    // TEXTO, NUMERO, BOOLEANO, JSON
+  grupo         String    // FINANCEIRO, ESTOQUE, etc.
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([empresaId, chave])
+}
+
+// Tipos Complexos (Embeddables no futuro MongoDB, aqui tabelas separadas ou JSON)
+// Para SQLite simplificado, usaremos tabelas/JSON
+
+// Endereco é usado em Empresa, Cliente, Fornecedor
+model EnderecoById {
+  id            String    @id @default(uuid())
+  empresaId     String    @unique
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  logradouro    String
+  numero        String
+  complemento   String?
+  bairro        String
+  cidade        String
+  estado        String
+  cep           String
+  codigoIbge    String?
+}
+
+// ==================== MÓDULO OPERACIONAL ====================
+
+// AreaComercial removida (redundante)
+
+
+model Turno {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  nome          String    // Matutino, Vespertino
+  inicio        String    // 08:00
+  fim           String    // 18:00
+  status        String    @default("ATIVO")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  colaboradores Colaborador[]
+  tarefas       TarefaOperacional[]
+}
+
+model TarefaOperacional {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  colaboradorId String?
+  colaborador   Colaborador? @relation(fields: [colaboradorId], references: [id])
+  turnoId       String?
+  turno         Turno?    @relation(fields: [turnoId], references: [id])
+  
+  titulo        String
+  descricao     String?
+  tipo          String    // LIMPEZA, PRODUCAO, ENTREGA, OUTROS
+  prioridade    String    // BAIXA, MEDIA, ALTA
+  status        String    // PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA
+  dataAgendada  DateTime
+  dataConclusao DateTime?
+  observacoes   String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+
+model Colaborador {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  usuarioId     String?   @unique
+  usuario       Usuario?  @relation(fields: [usuarioId], references: [id])
+  turnoId       String?
+  turno         Turno?    @relation(fields: [turnoId], references: [id])
+  
+  nome          String
+  cpf           String?   @unique
+  rg            String?
+  dataNascimento DateTime?
+  cargo         String
+  dataAdmissao  DateTime?
+  
+  // Contato
+  telefone      String?
+  celular       String?
+  email         String?
+  
+  // Endereço
+  logradouro    String?
+  numero        String?
+  complemento   String?
+  bairro        String?
+  cidade        String?
+  estado        String?
+  cep           String?
+  
+  // Documentos
+  pis           String?
+  ctps          String?
+  cnh           String?
+  cnhCategoria  String?
+  cnhValidade   DateTime?
+  
+  // Vendedor
+  funcaoComercialId String?
+  funcaoComercial   FuncaoComercial? @relation(fields: [funcaoComercialId], references: [id])
+  
+  fotoUrl       String?
+  status        String    @default("ATIVO")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tarefas       TarefaOperacional[]
+  ordensServico OrdemServico[]
+  dependentes   Dependente[]
+}
+
+model Dependente {
+  id            String    @id @default(uuid())
+  colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+  nome          String
+  parentesco    String    // FILHO, CONJUGE, OUTRO
+  cpf           String?
+  dataNascimento DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Transportadora {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  
+  razaoSocial   String
+  nomeFantasia  String
+  cnpj          String    @unique
+  ie            String?   // Inscrição Estadual
+  rntrc         String?   // Registro ANTT
+  
+  // Contato
+  email         String?
+  telefone      String?
+  
+  // Endereço
+  logradouro    String?
+  numero        String?
+  complemento   String?
+  bairro        String?
+  cidade        String?
+  estado        String?
+  cep           String?
+  
+  status        String    @default("ATIVO")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  veiculos      Veiculo[]
+}
+
+model Veiculo {
+  id            String    @id @default(uuid())
+  transportadoraId String?
+  transportadora   Transportadora? @relation(fields: [transportadoraId], references: [id])
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  
+  placa         String    @unique
+  modelo        String
+  marca         String
+  ano           Int?
+  renavam       String?
+  tipo          String    // CAMINHAO, UTILITARIO, MOTO
+  capacidade    Decimal?  // Kg ou m3
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Cliente {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  
+  tipo          String    // PF ou PJ
+  nomeFantasia  String
+  razaoSocial   String?
+  cpfCnpj       String    @unique
+  rgInscricao   String?
+  email         String?
+  telefone      String?
+  celular       String?
+  
+  // Endereço Simples (Expandir para tabela se precisar múltiplos)
+  logradouro    String?
+  numero        String?
+  complemento   String?
+  bairro        String?
+  cidade        String?
+  estado        String?
+  cep           String?
+  
+  status        String    @default("ATIVO")
+  limiteCredito Decimal?  @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ordensServico OrdemServico[]
+  pedidos       PedidoVenda[]
+
+  // Novos campos Comercial/Operacional
+  areaComercialId String?
+  areaComercial   AreaComercial? @relation(fields: [areaComercialId], references: [id])
+
+  grupoTabelaPrecoId String?
+  grupoTabelaPreco   GrupoTabelaPreco? @relation(fields: [grupoTabelaPrecoId], references: [id])
+
+  condicoesPagamento CondicaoPagamento[] // Relacionamento M-N explícito ou implícito
+  
+  rotaId        String?
+  rota          Rota?     @relation(fields: [rotaId], references: [id])
+  
+  perfilComissaoId String?
+  perfilComissao PerfilComissao? @relation(fields: [perfilComissaoId], references: [id])
+}
+
+model CondicaoPagamento {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  nome          String    // Ex: "30 Dias", "30/60/90"
+  descricao     String?
+  ativo         Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clientes      Cliente[]
+}
+
+model AreaComercial {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  nome          String    // Ex: "Zona Sul", "Centro"
+  descricao     String?
+  vendedorId    String?   // ID do usuário/colaborador responsável
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clientes      Cliente[]
+}
+
+model GrupoTabelaPreco {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  nome          String    // Ex: "Varejo", "Atacado", "Distribuidores"
+  ativo         Boolean   @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clientes      Cliente[]
+  tabelas       TabelaPreco[]
+}
+
+model TabelaPreco {
+  id            String    @id @default(uuid())
+  grupoId       String
+  grupo         GrupoTabelaPreco @relation(fields: [grupoId], references: [id])
+  nome          String    // Ex: "Tabela Padrão 2024"
+  desconto      Decimal?  @default(0) // Percentual de Ajuste/Desconto global
+  atividadeCliente String? // Ramo de atividade alvo
+  ativo         Boolean   @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  itens         ItemTabelaPreco[]
+}
+
+model ItemTabelaPreco {
+  id            String    @id @default(uuid())
+  tabelaId      String
+  tabela        TabelaPreco @relation(fields: [tabelaId], references: [id])
+  produtoId     String
+  produto       Produto   @relation(fields: [produtoId], references: [id])
+  precoVenda    Decimal
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ==================== MÓDULO COMERCIAL ====================
+
+model OrdemServico {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  clienteId     String?
+  cliente       Cliente?  @relation(fields: [clienteId], references: [id])
+  colaboradorId String?
+  colaborador   Colaborador? @relation(fields: [colaboradorId], references: [id])
+  
+  numero        Int       // Managed by application logic
+  titulo        String
+  descricao     String?
+  prioridade    String    @default("NORMAL")
+  status        String    @default("ABERTA") // ABERTA, EM_ANDAMENTO, CONCLUIDA, FATURADA
+  
+  dataAbertura  DateTime  @default(now())
+  dataPrevisao  DateTime?
+  dataFechamento DateTime?
+  
+  valorTotal    Decimal   @default(0)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ==================== MÓDULO PRODUTOS & ESTOQUE ====================
+
+model CategoriaProduto {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  nome          String
+  descricao     String?
+  status        String    @default("ATIVA")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  produtos      Produto[]
+}
+
+model Produto {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  categoriaId   String?
+  categoria     CategoriaProduto? @relation(fields: [categoriaId], references: [id])
+  
+  nome          String
+  codigo        String?   // SKU ou Código de Barras
+  descricao     String?
+  tipo          String    // PRODUTO_FINAL, INSUMO, MERCADORIA_REVENDA
+  unidade       String    // UN, KG, L, CX
+  
+  precoCusto    Decimal   @default(0)
+  precoVenda    Decimal   @default(0)
+  estoqueAtual  Decimal   @default(0)
+  estoqueMinimo Decimal   @default(0)
+  
+  ingredientes  String?   // JSON com lista de insumos (para manufatura simplificada)
+  
+  status        String    @default("ATIVO")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  movimentacoes MovimentacaoEstoque[]
+  itensPedido   ItemPedidoVenda[]
+  itensTabela   ItemTabelaPreco[]
+}
+
+model MovimentacaoEstoque {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  produtoId     String
+  produto       Produto   @relation(fields: [produtoId], references: [id])
+  
+  tipo          String    // ENTRADA, SAIDA, AJUSTE
+  quantidade    Decimal
+  valorUnitario Decimal?
+  motivo        String?   // VENDA, COMPRA, PERDA, PRODUCAO
+  documento     String?   // Nº Nota Fiscal ou Pedido
+  
+  usuarioId     String?   // Quem realizou
+  createdAt     DateTime  @default(now())
+}
+
+// ==================== MÓDULO COMERCIAL ====================
+
+model PedidoVenda {
+  id            String    @id @default(uuid())
+  empresaId     String
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+  numero        Int
+  
+  clienteId     String
+  cliente       Cliente   @relation(fields: [clienteId], references: [id])
+  vendedorId    String?   // Usuário ou Colaborador
+  
+  status        String    @default("ORCAMENTO") // ORCAMENTO, APROVADO, FATURADO, CANCELADO
+  dataEmissao   DateTime  @default(now())
+  dataValidade  DateTime?
+  
+  valorSubtotal Decimal   @default(0)
+  valorDesconto Decimal   @default(0)
+  valorTotal    Decimal   @default(0)
+  
+  formaPagamento String?
+  observacoes   String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  itens         ItemPedidoVenda[]
+}
+
+model ItemPedidoVenda {
+  id            String    @id @default(uuid())
+  pedidoId      String
+  pedido        PedidoVenda @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  
+  produtoId     String
+  produto       Produto     @relation(fields: [produtoId], references: [id])
+  
+  quantidade    Decimal
+  precoUnitario Decimal
+  desconto      Decimal     @default(0)
+  valorTotal    Decimal
+  
+  createdAt     DateTime  @default(now())
+}
+
+// ==================== NOVAS TABELAS COMERCIAIS ====================
+
+model FuncaoComercial {
+  id          String   @id @default(uuid())
+  empresaId   String
+  empresa     Empresa  @relation(fields: [empresaId], references: [id])
+  nome        String
+  superiorId  String?
+  superior    FuncaoComercial? @relation("Hierarquia", fields: [superiorId], references: [id])
+  subordinados FuncaoComercial[] @relation("Hierarquia")
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  colaboradores Colaborador[]
+}
+
+model Rota {
+  id          String   @id @default(uuid())
+  empresaId   String
+  empresa     Empresa  @relation(fields: [empresaId], references: [id])
+  nome        String
+  descricao   String?
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  clientes    Cliente[]
+}
+
+model PerfilComissao {
+  id          String   @id @default(uuid())
+  empresaId   String
+  empresa     Empresa  @relation(fields: [empresaId], references: [id])
+  nome        String
+  regras      String?  // JSON com regras
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clientes    Cliente[]
+}
