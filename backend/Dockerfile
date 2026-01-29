@@ -29,7 +29,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production
+RUN npm ci --only=production && apk add --no-cache compat-openssl11
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist ./dist
