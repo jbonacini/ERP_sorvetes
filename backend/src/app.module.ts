@@ -13,6 +13,11 @@ import { TurnosModule } from './turnos/turnos.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { FuncoesComerciaisModule } from './funcoes-comerciais/funcoes-comerciais.module';
 import { TransportadorasModule } from './transportadoras/transportadoras.module';
+import { ProdutosModule } from './produtos/produtos.module';
+import { PedidosModule } from './pedidos/pedidos.module';
+import { CondicoesPagamentoModule } from './condicoes-pagamento/condicoes-pagamento.module';
+import { TabelasPrecoModule } from './tabelas-preco/tabelas-preco.module';
+import { OrdensServicoModule } from './ordens-servico/ordens-servico.module';
 
 @Module({
   imports: [
