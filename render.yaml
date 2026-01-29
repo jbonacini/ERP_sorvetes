@@ -1,3 +1,9 @@
+databases:
+  - name: db-sorvetes
+    databaseName: erp_sorvetes
+    user: sorvetes_user
+    plan: free # ou starter, mas free expira em 30 dias (bom explicitar)
+
 services:
   - type: web
     name: backend-sorvetes
@@ -7,9 +13,11 @@ services:
     rootDir: backend
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: db-sorvetes
+          property: connectionString
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
 
   - type: web
     name: frontend-sorvetes
