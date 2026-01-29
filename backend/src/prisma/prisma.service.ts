@@ -5,6 +5,20 @@ import 'dotenv/config';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
     async onModuleInit() {
-        await this.$connect();
+        await this.connectWithRetry();
+    }
+
+    private async connectWithRetry(retries = 5, delay = 2000) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                await this.$connect();
+                console.log('Successfully connected to database');
+                return;
+            } catch (error) {
+                console.error(`Error connecting to database (attempt ${i + 1}/${retries}):`, error.message);
+                if (i === retries - 1) throw error;
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+        }
     }
 }
