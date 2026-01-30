@@ -13,6 +13,7 @@ import { TurnosModule } from './turnos/turnos.module';
 import { TarefasModule } from './tarefas/tarefas.module';
 import { FuncoesComerciaisModule } from './funcoes-comerciais/funcoes-comerciais.module';
 import { TransportadorasModule } from './transportadoras/transportadoras.module';
+import { SeedModule } from './seed/seed.module';
 import { ProdutosModule } from './produtos/produtos.module';
 import { PedidosModule } from './pedidos/pedidos.module';
 import { CondicoesPagamentoModule } from './condicoes-pagamento/condicoes-pagamento.module';
@@ -36,6 +37,7 @@ import { OrdensServicoModule } from './ordens-servico/ordens-servico.module';
     OrdensServicoModule,
     FuncoesComerciaisModule,
     TransportadorasModule,
+    SeedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
