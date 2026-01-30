@@ -23,7 +23,7 @@ services:
     name: frontend-sorvetes
     env: static
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    staticPublishPath: build_static
     routes:
       - type: rewrite
         source: /*
