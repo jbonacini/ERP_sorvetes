@@ -4,8 +4,8 @@ import 'dotenv/config';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
-    async onModuleInit() {
-        await this.connectWithRetry();
+    onModuleInit() {
+        this.connectWithRetry();
     }
 
     private async connectWithRetry(retries = 30, delay = 5000) {
